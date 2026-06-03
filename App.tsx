@@ -1,45 +1,64 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+// ============================================================
+// TourOS POS — Entry Point
+// ============================================================
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { StatusBar, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+import AppNavigator from './src/navigation';
+import { initDatabase } from './src/db/database';
+import { useAuthStore } from './src/store/authStore';
+import { colors } from './src/utils/theme';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+export default function App() {
+  const [isReady, setIsReady] = useState(false);
+  const hydrate = useAuthStore(state => state.hydrate);
+
+  useEffect(() => {
+    async function bootstrap() {
+      try {
+        // 1. Inicializar base de dados SQLite
+        await initDatabase();
+
+        // 2. Carregar sessão do AsyncStorage
+        await hydrate();
+      } catch (error) {
+        console.error('[App] Erro no bootstrap:', error);
+      } finally {
+        setIsReady(true);
+      }
+    }
+
+    bootstrap();
+  }, [hydrate]);
+
+  if (!isReady) {
+    return (
+      <View style={styles.splash}>
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={colors.SECONDARY}
+        />
+        <ActivityIndicator size="large" color={colors.PRIMARY} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.BACKGROUND} />
+      <AppNavigator />
+      <Toast />
     </SafeAreaProvider>
   );
 }
 
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
+  splash: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.SECONDARY,
   },
 });
-
-export default App;
